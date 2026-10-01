@@ -1,6 +1,6 @@
-# Kalaneuvos IoT Condition Monitoring
+# IoT Condition Monitoring for Industrial Slicing Machines
 
-Real-time IoT condition monitoring for Multivac slicing machines at [Kalaneuvos](https://kalaneuvos.fi/), a fish processing factory in Finland. Built as my bachelor's thesis project at Hämeen ammattikorkeakoulu (HAMK), ICT Bioeconomy program.
+Real-time IoT condition monitoring for Multivac slicing machines at a fish processing factory in Finland. Built as my bachelor's thesis project at Hämeen ammattikorkeakoulu (HAMK), ICT Bioeconomy program.
 
 An ESP32 node reads temperature, humidity, and vibration from a slicing machine, streams it to AWS over MQTT/TLS, and a serverless AWS pipeline persists it and raises an alert on threshold breach, while Grafana visualizes it in real time — giving factory staff early warning of abnormal vibration or temperature before a machine fails.
 
@@ -15,7 +15,7 @@ flowchart LR
     A[ESP32<br/>DHT22 + MPU-6050] -- MQTT / TLS --> B[AWS IoT Core]
     B -- IoT Rule: RouteToDynamoDB<br/>SQL --> C[Lambda<br/>processTelemetryAndAlert]
     C --> D[(DynamoDB<br/>EngineTelemetry)]
-    C -- threshold breached --> E[SNS Topic<br/>KalaneuvosAlerts]
+    C -- threshold breached --> E[SNS Topic<br/>EngineAlerts]
     E --> F[Email alert]
     D --> G[Grafana Cloud<br/>dashboard]
     A -. local readout .-> H[ST7735 TFT display]
@@ -25,7 +25,7 @@ flowchart LR
 The pipeline is serverless end-to-end. An AWS IoT Core rule (`RouteToDynamoDB`) matches messages on the `esp32/telemetry` topic and invokes a Lambda function:
 
 ```sql
-SELECT "esp32-kalaneuvos-01" as device_id, timestamp() as timestamp,
+SELECT "esp32-monitor-01" as device_id, timestamp() as timestamp,
        temperature, humidity, vibration_x, vibration_y, vibration_z
 FROM 'esp32/telemetry'
 ```
@@ -56,8 +56,8 @@ The Lambda function (`lambda/processTelemetryAndAlert`) does two things on every
 ## Repo structure
 
 ```
-firmware/kalaneuvos_monitor/
-  kalaneuvos_monitor.ino   # main sketch: sensors, TFT UI, AWS IoT MQTT client
+firmware/engine_monitor/
+  engine_monitor.ino   # main sketch: sensors, TFT UI, AWS IoT MQTT client
   Blynk.ino                # Blynk mobile-app telemetry mirror
   secrets.h.example        # template for WiFi/AWS/Blynk credentials (copy to secrets.h)
 lambda/processTelemetryAndAlert/
@@ -69,7 +69,7 @@ sample_data/
 
 ## Running it yourself
 
-1. Open `firmware/kalaneuvos_monitor/` in the Arduino IDE.
+1. Open `firmware/engine_monitor/` in the Arduino IDE.
 2. Copy `secrets.h.example` to `secrets.h` in the same folder and fill in:
    - your Wi-Fi SSID/password
    - an AWS IoT Core "Thing" endpoint, device certificate, and private key (AWS IoT Core → Manage → Things)
@@ -85,7 +85,7 @@ sample_data/
 
 ## Status
 
-In active implementation and debugging as of thesis coursework running June–December 2026. Approved by Kalaneuvos as a real deployment target.
+In active implementation and debugging as of thesis coursework running June–December 2026. Approved by the factory as a real deployment target.
 
 ## License
 
