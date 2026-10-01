@@ -72,7 +72,7 @@ void connectAWS() {
   Serial.println("Establishing Secure TLS Tunnel to AWS IoT Core...");
   while (!client.connected()) {
     Serial.print("Attempting MQTT connection to AWS... ");
-    if (client.connect("esp32-kalaneuvos-01")) {
+    if (client.connect("esp32-monitor-01")) {
       Serial.println("CONNECTED SUCCESSFULLY!");
     } else {
       Serial.print("FAILED, rc = ");
