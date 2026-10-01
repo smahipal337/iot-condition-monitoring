@@ -1,5 +1,5 @@
 # Real device credentials — never commit
-firmware/kalaneuvos_monitor/secrets.h
+firmware/engine_monitor/secrets.h
 
 # Arduino IDE / build artifacts
 .vs/
