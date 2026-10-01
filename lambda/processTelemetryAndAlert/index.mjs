@@ -63,7 +63,7 @@ export const handler = async (event) => {
 
     await sns.send(new PublishCommand({
       TopicArn: SNS_TOPIC_ARN,
-      Subject: `Kalaneuvos Engine Alert: ${device_id}`,
+      Subject: `Engine Alert: ${device_id}`,
       Message: message,
     }));
 
