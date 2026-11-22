@@ -4,7 +4,7 @@ Real-time IoT condition monitoring for Multivac slicing machines at a fish proce
 
 An ESP32 node reads temperature, humidity, and vibration from a slicing machine, streams it to AWS over MQTT/TLS, and a serverless AWS pipeline persists it and raises an alert on threshold breach, while Grafana visualizes it in real time — giving factory staff early warning of abnormal vibration or temperature before a machine fails.
 
-## Why
+## Why?
 
 Multivac slicing machines run continuously in a cold-chain food processing environment. Unplanned downtime is expensive and hard to diagnose after the fact. This project adds always-on condition monitoring so operators can see machine health live and get notified of anomalies (e.g. abnormal vibration or an out-of-range temperature) before they become failures, instead of relying on manual checks.
 
