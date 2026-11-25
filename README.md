@@ -32,6 +32,18 @@ FROM 'esp32/telemetry'
 
 The Lambda function (`lambda/processTelemetryAndAlert`) does two things on every reading: it writes the record to the `EngineTelemetry` DynamoDB table, and it checks the reading against configurable temperature and vibration thresholds — publishing an SNS notification (delivered by email) whenever one is breached. Grafana Cloud queries the `EngineTelemetry` table directly to render live charts.
 
+### Net vibration
+
+Vibration is evaluated as *net* vibration — the magnitude of the three accelerometer axes with gravity removed — and stored as a `vibration_net` column alongside the raw axes:
+
+```
+vibration_net = | sqrt(x² + y² + z²) − 9.81 |
+```
+
+This correction matters more than it looks. The MPU-6050 reports total acceleration, so a completely motionless machine still reads about 9.6 m/s², nearly all of it gravity acting on whichever axis the sensor happens to face. On this installation gravity falls almost entirely on x, which read about -9.5 m/s² at rest. Comparing that raw figure against any small threshold would raise an alert on every single reading; removing gravity first leaves a resting value of roughly 0.2 m/s², so a real disturbance stands out clearly.
+
+The default threshold of 2.5 m/s² is provisional — roughly ten times the measured resting noise. It should be re-derived from the machine's own running baseline once a full production cycle has been recorded, rather than treated as a tuned value.
+
 ## Hardware
 
 | Component | Purpose |
@@ -57,7 +69,7 @@ The Lambda function (`lambda/processTelemetryAndAlert`) does two things on every
 
 ```
 firmware/engine_monitor/
-  engine_monitor.ino   # main sketch: sensors, TFT UI, AWS IoT MQTT client
+  engine_monitor.ino       # main sketch: sensors, TFT UI, AWS IoT MQTT client
   Blynk.ino                # Blynk mobile-app telemetry mirror
   secrets.h.example        # template for WiFi/AWS/Blynk credentials (copy to secrets.h)
 lambda/processTelemetryAndAlert/
@@ -76,7 +88,19 @@ sample_data/
    - your Blynk template ID/name and auth token (optional — only needed for the mobile mirror)
 3. Create a DynamoDB table with partition key `device_id` (String) and sort key `timestamp` (Number).
 4. Create an SNS topic and subscribe your email to it.
-5. Deploy `lambda/processTelemetryAndAlert/index.mjs` as a Lambda function (Node.js runtime). Give its execution role `dynamodb:PutItem` on the table and `sns:Publish` on the topic. Set environment variables `TABLE_NAME`, `SNS_TOPIC_ARN`, `VIBRATION_THRESHOLD`, `TEMP_MAX_C`, `TEMP_MIN_C`, and `TEMP_CALIBRATION_OFFSET_C` (added after on-site testing showed the DHT22 reading ~3°C above a factory reference thermometer; set to the signed correction your own sensor needs, e.g. `-3`, or `0` if your sensor is already accurate).
+5. Deploy `lambda/processTelemetryAndAlert/index.mjs` as a Lambda function (Node.js runtime). Give its execution role `dynamodb:PutItem` on the table and `sns:Publish` on the topic. Set these environment variables:
+
+   | Variable | Purpose |
+   |---|---|
+   | `TABLE_NAME` | DynamoDB table to write to |
+   | `SNS_TOPIC_ARN` | Topic that alert emails are published to |
+   | `VIBRATION_THRESHOLD` | Net vibration alert limit in m/s² (default `2.5`) |
+   | `GRAVITY_MS2` | Gravity subtracted before the vibration check (default `9.81`) |
+   | `TEMP_MAX_C` | High-temperature alert limit |
+   | `TEMP_MIN_C` | Low-temperature alert limit |
+   | `TEMP_CALIBRATION_OFFSET_C` | Signed temperature correction, e.g. `-3` |
+
+   The calibration offset was added after on-site testing showed the DHT22 reading about 3°C above a factory reference thermometer; set it to whatever correction your own sensor needs, or `0` if it is already accurate.
 6. In AWS IoT Core, create an IoT Rule on topic `esp32/telemetry` with a Lambda action pointing at that function.
 7. Point a Grafana (Cloud or self-hosted) DynamoDB data source at the table.
 8. Flash the ESP32 and power it on — the on-device screen shows live readings immediately; DynamoDB, the dashboard, and (if a threshold is breached) an email alert all update within seconds.
